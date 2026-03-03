@@ -6,8 +6,15 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 let supabase: ReturnType<typeof createClient> | null = null;
 
+// Debug logging
+console.log('[API Function] SUPABASE_URL:', SUPABASE_URL ? 'SET' : 'NOT SET');
+console.log('[API Function] SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET');
+
 if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  console.log('[API Function] Supabase client initialized');
+} else {
+  console.log('[API Function] Running in DEMO mode - Supabase not configured');
 }
 
 // Helper to parse URL path
@@ -118,13 +125,15 @@ async function handleProjects(path: string, method: string, body: any) {
     }
 
     if (method === 'POST') {
-      const { data, error } = await supabase.from('projects').insert(body as any).select().single();
+      // @ts-ignore - Supabase type inference issue
+      const { data, error } = await supabase.from('projects').insert(body).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data, 201);
     }
 
     if (method === 'PUT' && id) {
-      const { data, error } = await supabase.from('projects').update(body as any).eq('id', id).select().single();
+      // @ts-ignore - Supabase type inference issue
+      const { data, error } = await supabase.from('projects').update(body).eq('id', id).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data);
     }
@@ -164,13 +173,15 @@ async function handleTasks(path: string, method: string, body: any) {
     }
 
     if (method === 'POST') {
-      const { data, error } = await supabase.from('tasks').insert(body as any).select().single();
+      // @ts-ignore - Supabase type inference issue
+      const { data, error } = await supabase.from('tasks').insert(body).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data, 201);
     }
 
     if (method === 'PUT' && id) {
-      const { data, error } = await supabase.from('tasks').update(body as any).eq('id', id).select().single();
+      // @ts-ignore - Supabase type inference issue
+      const { data, error } = await supabase.from('tasks').update(body).eq('id', id).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data);
     }
@@ -210,13 +221,15 @@ async function handleEvents(path: string, method: string, body: any) {
     }
 
     if (method === 'POST') {
-      const { data, error } = await supabase.from('events').insert(body as any).select().single();
+      // @ts-ignore - Supabase type inference issue
+      const { data, error } = await supabase.from('events').insert(body).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data, 201);
     }
 
     if (method === 'PUT' && id) {
-      const { data, error } = await supabase.from('events').update(body as any).eq('id', id).select().single();
+      // @ts-ignore - Supabase type inference issue
+      const { data, error } = await supabase.from('events').update(body).eq('id', id).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data);
     }
@@ -251,7 +264,8 @@ async function handleTransactions(path: string, method: string, body: any) {
     }
 
     if (method === 'POST') {
-      const { data, error } = await supabase.from('transactions').insert(body as any).select().single();
+      // @ts-ignore - Supabase type inference issue
+      const { data, error } = await supabase.from('transactions').insert(body).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data, 201);
     }
@@ -318,7 +332,8 @@ async function handleProfile(path: string, method: string, body: any, headers: R
 
       const { data, error } = await supabase
         .from('profiles')
-        .update(body as any)
+        // @ts-ignore - Supabase type inference issue
+        .update(body)
         .eq('id', user.user.id)
         .select()
         .single();
