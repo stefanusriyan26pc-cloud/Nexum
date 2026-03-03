@@ -20,6 +20,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const Debug = lazy(() => import('./pages/Debug'));
 
 // Loading fallback component
 function PageLoader() {
@@ -44,6 +45,9 @@ export default function App() {
         <ProjectsProvider>
         <Suspense fallback={<PageLoader />}>
           <Routes>
+          {/* Debug Route (public) */}
+          <Route path="/debug" element={<Debug />} />
+          
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
