@@ -1,4 +1,4 @@
-import { Handler } from '@netlify/functions';
+import { Handler, HandlerResponse } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -16,21 +16,22 @@ function getPath(url: string): string {
 }
 
 // Helper to handle JSON response
-function json<T>(data: T, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
+function json<T>(data: T, status = 200): HandlerResponse {
+  return {
+    statusCode: status,
     headers: { 'Content-Type': 'application/json' },
-  });
+    body: JSON.stringify(data),
+  };
 }
 
 // Helper to extract auth token
-function getAuthToken(headers: Record<string, string>): string | null {
-  const auth = headers['authorization'] || headers['Authorization'] || '';
-  return auth.startsWith('Bearer ') ? auth.slice(7) : null;
+function getAuthToken(headers: Record<string, string | undefined>): string | null {
+  const auth = (headers['authorization'] || headers['Authorization']) as string | undefined;
+  return auth?.startsWith('Bearer ') ? auth.slice(7) : null;
 }
 
 // Auth endpoints
-async function handleAuth(path: string, method: string, body: Record<string, any>, headers: Record<string, string>) {
+async function handleAuth(path: string, method: string, body: any, headers: Record<string, string | undefined>) {
   // Demo login (when Supabase not configured)
   if (path === '/api/auth/login' && method === 'POST') {
     if (!supabase) {
@@ -95,7 +96,7 @@ async function handleAuth(path: string, method: string, body: Record<string, any
 }
 
 // Projects endpoints
-async function handleProjects(path: string, method: string, body: Record<string, any>) {
+async function handleProjects(path: string, method: string, body: any) {
   if (!supabase) {
     if (method === 'GET') return json([]);
     if (method === 'POST') return json({ id: '1', ...body }, 201);
@@ -141,7 +142,7 @@ async function handleProjects(path: string, method: string, body: Record<string,
 }
 
 // Tasks endpoints
-async function handleTasks(path: string, method: string, body: Record<string, any>) {
+async function handleTasks(path: string, method: string, body: any) {
   if (!supabase) {
     if (method === 'GET') return json([]);
     if (method === 'POST') return json({ id: '1', ...body }, 201);
@@ -187,7 +188,7 @@ async function handleTasks(path: string, method: string, body: Record<string, an
 }
 
 // Events endpoints
-async function handleEvents(path: string, method: string, body: Record<string, any>) {
+async function handleEvents(path: string, method: string, body: any) {
   if (!supabase) {
     if (method === 'GET') return json([]);
     if (method === 'POST') return json({ id: '1', ...body }, 201);
@@ -233,7 +234,7 @@ async function handleEvents(path: string, method: string, body: Record<string, a
 }
 
 // Transactions endpoints
-async function handleTransactions(path: string, method: string, body: Record<string, any>) {
+async function handleTransactions(path: string, method: string, body: any) {
   if (!supabase) {
     if (method === 'GET') return json([]);
     if (method === 'POST') return json({ id: '1', ...body }, 201);
@@ -268,7 +269,7 @@ async function handleTransactions(path: string, method: string, body: Record<str
 }
 
 // Profile endpoint
-async function handleProfile(path: string, method: string, body: Record<string, any>, headers: Record<string, string>) {
+async function handleProfile(path: string, method: string, body: any, headers: Record<string, string | undefined>) {
   if (path !== '/api/profile') return null;
 
   if (!supabase) {
@@ -396,7 +397,7 @@ async function handleAnalytics(path: string, method: string) {
 // Main handler
 export const handler: Handler = async (event) => {
   // CORS headers
-  const headers = {
+  const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -407,11 +408,15 @@ export const handler: Handler = async (event) => {
 
   // Handle preflight
   if (method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers });
+    return {
+      statusCode: 204,
+      headers: corsHeaders,
+      body: '',
+    };
   }
 
   // Parse body
-  let body = {};
+  let body: any = {};
   if (event.body) {
     try {
       body = JSON.parse(event.body);
@@ -420,71 +425,92 @@ export const handler: Handler = async (event) => {
     }
   }
 
-  // Convert node headers to lowercase
+  // Convert node headers - filter out undefined values
   const reqHeaders = Object.fromEntries(
-    Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
+    Object.entries(event.headers || {})
+      .map(([k, v]) => [k.toLowerCase(), v])
+      .filter(([, v]) => v !== undefined) as [string, string][]
   );
 
   try {
     // Health check
     if (path === '/api/health') {
-      return json({ status: 'ok' });
+      return {
+        ...json({ status: 'ok' }),
+        headers: { ...json({ status: 'ok' }).headers, ...corsHeaders },
+      };
     }
 
     // Auth routes
     if (path.startsWith('/api/auth/')) {
-      const response = await handleAuth(path, method, body, reqHeaders);
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      return response;
+      const response = await handleAuth(path, method, body, event.headers || {});
+      return {
+        ...response,
+        headers: { ...response.headers, ...corsHeaders },
+      };
     }
 
     // Projects routes
     if (path.startsWith('/api/projects')) {
       const response = await handleProjects(path, method, body);
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      return response;
+      return {
+        ...response,
+        headers: { ...response.headers, ...corsHeaders },
+      };
     }
 
     // Tasks routes
     if (path.startsWith('/api/tasks')) {
       const response = await handleTasks(path, method, body);
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      return response;
+      return {
+        ...response,
+        headers: { ...response.headers, ...corsHeaders },
+      };
     }
 
     // Events routes
     if (path.startsWith('/api/events')) {
       const response = await handleEvents(path, method, body);
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      return response;
+      return {
+        ...response,
+        headers: { ...response.headers, ...corsHeaders },
+      };
     }
 
     // Transactions routes
     if (path.startsWith('/api/transactions')) {
       const response = await handleTransactions(path, method, body);
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      return response;
+      return {
+        ...response,
+        headers: { ...response.headers, ...corsHeaders },
+      };
     }
 
     // Profile route
-    const profileResponse = await handleProfile(path, method, body, reqHeaders);
+    const profileResponse = await handleProfile(path, method, body, event.headers || {});
     if (profileResponse) {
-      profileResponse.headers.set('Access-Control-Allow-Origin', '*');
-      return profileResponse;
+      return {
+        ...profileResponse,
+        headers: { ...profileResponse.headers, ...corsHeaders },
+      };
     }
 
     // Exchange rates
     if (path === '/api/exchange-rates') {
       const response = await handleExchangeRates();
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      return response;
+      return {
+        ...response,
+        headers: { ...response.headers, ...corsHeaders },
+      };
     }
 
     // Analytics
     if (path === '/api/analytics') {
       const response = await handleAnalytics(path, method);
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      return response;
+      return {
+        ...response,
+        headers: { ...response.headers, ...corsHeaders },
+      };
     }
 
     // Not found
