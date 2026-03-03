@@ -118,13 +118,13 @@ async function handleProjects(path: string, method: string, body: any) {
     }
 
     if (method === 'POST') {
-      const { data, error } = await supabase.from('projects').insert(body).select().single();
+      const { data, error } = await supabase.from('projects').insert(body as any).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data, 201);
     }
 
     if (method === 'PUT' && id) {
-      const { data, error } = await supabase.from('projects').update(body).eq('id', id).select().single();
+      const { data, error } = await supabase.from('projects').update(body as any).eq('id', id).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data);
     }
@@ -164,13 +164,13 @@ async function handleTasks(path: string, method: string, body: any) {
     }
 
     if (method === 'POST') {
-      const { data, error } = await supabase.from('tasks').insert(body).select().single();
+      const { data, error } = await supabase.from('tasks').insert(body as any).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data, 201);
     }
 
     if (method === 'PUT' && id) {
-      const { data, error } = await supabase.from('tasks').update(body).eq('id', id).select().single();
+      const { data, error } = await supabase.from('tasks').update(body as any).eq('id', id).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data);
     }
@@ -210,13 +210,13 @@ async function handleEvents(path: string, method: string, body: any) {
     }
 
     if (method === 'POST') {
-      const { data, error } = await supabase.from('events').insert(body).select().single();
+      const { data, error } = await supabase.from('events').insert(body as any).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data, 201);
     }
 
     if (method === 'PUT' && id) {
-      const { data, error } = await supabase.from('events').update(body).eq('id', id).select().single();
+      const { data, error } = await supabase.from('events').update(body as any).eq('id', id).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data);
     }
@@ -251,7 +251,7 @@ async function handleTransactions(path: string, method: string, body: any) {
     }
 
     if (method === 'POST') {
-      const { data, error } = await supabase.from('transactions').insert(body).select().single();
+      const { data, error } = await supabase.from('transactions').insert(body as any).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data, 201);
     }
@@ -318,7 +318,7 @@ async function handleProfile(path: string, method: string, body: any, headers: R
 
       const { data, error } = await supabase
         .from('profiles')
-        .update(body)
+        .update(body as any)
         .eq('id', user.user.id)
         .select()
         .single();
