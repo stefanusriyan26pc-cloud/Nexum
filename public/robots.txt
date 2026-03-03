@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Block auth routes from indexing (no sensitive crawling needed)
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+
+Sitemap: /sitemap.xml
