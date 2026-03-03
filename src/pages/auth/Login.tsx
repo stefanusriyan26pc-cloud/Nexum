@@ -7,8 +7,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/api` : '/api';
-
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -23,51 +21,39 @@ export default function Login() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const supabase = getSupabaseBrowser();
+      if (!supabase) {
+        throw new Error('Supabase not configured');
+      }
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Sign in failed');
-      }
-      const data = await res.json();
 
-      // Sync profile with authenticated user
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
       if (data.user) {
-        const fullName: string | undefined = data.user.name ?? undefined;
-        let firstName: string | undefined;
-        let lastName: string | undefined;
-        if (fullName) {
-          const parts = fullName.trim().split(' ');
-          firstName = parts[0];
-          if (parts.length > 1) {
-            lastName = parts.slice(1).join(' ');
-          }
-        } else if (data.user.email) {
-          firstName = String(data.user.email).split('@')[0];
-        }
+        const firstName = data.user.user_metadata?.firstName || data.user.email?.split('@')[0] || 'User';
+        const lastName = data.user.user_metadata?.lastName || '';
 
-        const token: string | undefined = data.token;
-
-        void fetch(`${API_BASE}/profile`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            firstName,
-            lastName,
-            email: data.user.email ?? email,
-          }),
-        }).catch(() => {
-          // Profile sync failure should not block login
-        });
+        // Sync profile with Supabase
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: data.user.email,
+            first_name: firstName,
+            last_name: lastName,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' })
+          .catch(() => {
+            // Profile sync failure should not block login
+          });
       }
 
-      window.localStorage.setItem('nexum.auth', JSON.stringify(data));
       navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed');

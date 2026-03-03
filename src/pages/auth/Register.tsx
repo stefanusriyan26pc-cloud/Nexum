@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
 import { AuthLayout } from '@/layouts/AuthLayout';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/api` : '/api';
+import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function Register() {
   const { t } = useTranslation();
@@ -27,16 +26,46 @@ export default function Register() {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, firstName, lastName, username }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Sign up failed');
+      const supabase = getSupabaseBrowser();
+      if (!supabase) {
+        throw new Error('Supabase not configured');
       }
-      setSuccess(data.message || t('auth.checkEmailConfirm'));
+
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            firstName,
+            lastName,
+            username,
+          },
+        },
+      });
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (data.user) {
+        // Create profile in profiles table
+        await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            first_name: firstName,
+            last_name: lastName,
+            username: username || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .catch(() => {
+            // Profile creation failure should not block signup
+          });
+      }
+
+      setSuccess(data.user?.identities?.length === 0 ? t('auth.checkEmailConfirm') : 'Account created! Redirecting...');
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 1500);
